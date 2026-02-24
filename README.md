@@ -1,36 +1,190 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 図面解析・仕様書生成システム デモ
 
-## Getting Started
+## このデモは何か
 
-First, run the development server:
+図面（PDF/画像）と過去の設計資料をAIが解析し、**仕様要素の抽出 → 仕様書ドラフトの自動生成 → レビューによる品質担保** という一連のワークフローを体験できるフロントエンドデモです。
+
+バックエンドは実装していません。すべてのデータ取得・処理は `src/mock/` 内のモックAPIで再現しており、ネットワーク不要でローカルだけで動作します。
+
+## 技術スタック
+
+| カテゴリ | 技術 |
+|---------|------|
+| フレームワーク | Next.js 15 (App Router) / TypeScript |
+| UIコンポーネント | shadcn/ui (New York スタイル) |
+| スタイリング | Tailwind CSS v4 |
+| アイコン | lucide-react |
+| Markdown描画 | react-markdown + remark-gfm |
+| データ層 | Mock API（Promise + setTimeout による疑似遅延） |
+
+## セットアップ・起動方法
+
+### 前提条件
+
+- **Node.js** v18 以上
+- **npm** v9 以上（Node.js に同梱）
+
+### クローンから起動まで
 
 ```bash
+# 1. リポジトリをクローン
+git clone <リポジトリURL>
+cd 日本信号様_demo
+
+# 2. 依存パッケージをインストール
+npm install
+
+# 3. 開発サーバーを起動
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで http://localhost:3000 を開いてください。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### その他のコマンド
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build   # 本番用ビルド
+npm run start   # ビルド済みアプリの起動
+npm run lint    # ESLint によるコードチェック
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## デモ操作手順
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 1. 案件一覧（`/`）
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+トップページに4件のサンプル案件が表示されます。
 
-## Deploy on Vercel
+| 操作 | 説明 |
+|------|------|
+| 検索 | 上部の検索バーで案件名・案件コード・顧客名を横断検索 |
+| フィルタ | ステータス（下書き/解析中/抽出完了/レビュー中/承認済/アーカイブ）で絞り込み |
+| ソート | 「案件名」「更新日」の列ヘッダクリックで昇順/降順を切り替え |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+案件名をクリックすると詳細画面へ遷移します。
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 2. 案件詳細（`/projects/[id]`）
+
+> **推奨: `proj-001`（東京駅北口 信号制御盤 改修）が最もデータが充実しています。**
+
+詳細画面は5つのタブで構成されています。
+
+#### ファイルタブ — 図面・資料の管理
+
+- アップロード済みファイル一覧（図面 / 設計資料 / 参考資料）を表示
+- **「ファイル追加」ボタン** → 疑似アップロード（1.5秒後にファイルが追加される）
+- 各ファイルの目アイコン → プレビューダイアログ
+
+#### 解析結果タブ — AIによる仕様要素の抽出
+
+- **抽出要素テーブル**: カテゴリ（寸法/材料/注記/部品/公差/表面処理）・値・単位・信頼度を一覧表示
+- **根拠ハイライト**: 矢印アイコンをクリック → 図面上の該当箇所を赤枠（bbox）でハイライト表示
+- **「再解析」ボタン**: 以下の5ステップがプログレスバー付きで進行
+  1. OCR処理（テキスト・数値認識）
+  2. 構造解析（レイアウト認識）
+  3. 要素抽出（寸法・材料・部品の検出）
+  4. 信頼度算出（各要素のスコアリング）
+  5. 類似検索（過去案件とのマッチング）
+- **類似図面 / 類似仕様**: 過去案件との類似度スコア・理由・関連セクションを表示
+
+#### 仕様書ドラフトタブ — 仕様書の自動生成
+
+- 5セクション（概要 / 外形仕様 / 環境条件 / 機能仕様 / 試験要件）をMarkdownで表示
+- 各セクションの **「編集」ボタン** → ダイアログで内容を直接編集・保存
+- **「再生成」ボタン**: 以下の5ステップで再生成
+  1. テンプレート読込
+  2. 要素マッピング（抽出要素をテンプレートに対応付け）
+  3. セクション生成（Markdown生成）
+  4. 整合性チェック（セクション間の矛盾検出）
+  5. レビュー項目生成（要チェック箇所の自動検出）
+
+#### レビュータブ — 品質チェック・コメント
+
+- レビュー項目を種別（未記載 / 不整合 / 注意 / 提案）× 重要度（高 / 中 / 低）で一覧表示
+- 各項目をクリックで展開 → 詳細説明・対応するドラフトセクション・コメントスレッドを表示
+- **「解決済みにする」「却下」** でステータスを遷移
+- コメント入力欄からコメントを追加可能
+
+#### 履歴タブ — 監査ログ
+
+- すべての操作履歴をタイムライン形式で表示（ファイル / 解析 / ドラフト / レビュー / システム）
+
+### 3. 版差分比較（`/projects/[id]/compare`）
+
+- 案件詳細画面右上の **「版差分」ボタン** からアクセス
+- Rev.1 → Rev.2 の変更点一覧（寸法変更 / 注記変更 / 材料変更 / 公差変更 / 追加 / 削除）
+- 各変更点に **旧値（赤）→ 新値（緑）**、重要度、影響する仕様書セクションを表示
+
+### 4. 設定（`/settings`）
+
+- ヘッダの「設定」リンクから遷移
+- **仕様書テンプレート**: 3種類（制御盤 / 表示器 / 踏切制御装置）の一覧表示
+- **必須チェック項目**: カテゴリ別のチェック項目をON/OFFで切り替え → 「設定を保存」で反映
+
+---
+
+## Mock構成
+
+本デモではバックエンドを持たず、すべてのデータを `src/mock/` 配下で管理しています。各API関数は `Promise` + `setTimeout` で疑似的なネットワーク遅延を再現しています。
+
+```
+src/mock/
+├── api/
+│   └── index.ts          擬似API関数（fetchProjects, fetchDraft 等）
+│                          → Promise + setTimeout で200〜300msの遅延を再現
+├── data/
+│   ├── types.ts           全エンティティの TypeScript 型定義
+│   ├── projects.ts        案件データ（4件）
+│   ├── files.ts           ファイルデータ（図面/設計資料/参考資料）
+│   ├── elements.ts        抽出要素（カテゴリ/値/単位/信頼度/bbox）
+│   ├── similar.ts         類似図面・類似仕様の候補
+│   ├── drafts.ts          仕様書ドラフト（5セクション・Markdown）
+│   ├── reviews.ts         レビュー項目・コメント
+│   ├── audit-log.ts       監査ログ
+│   ├── templates.ts       仕様書テンプレート・チェック項目
+│   ├── diffs.ts           版差分データ
+│   └── analysis-steps.ts  解析/生成ワークフローのステップ定義
+├── generators/
+│   └── index.ts           再解析・再生成時のモックデータ生成器
+└── db.ts                  全データの集約エクスポート
+```
+
+### データの変更・追加方法
+
+- **案件を増やしたい場合**: `src/mock/data/projects.ts` に新しい案件オブジェクトを追加し、関連する `files.ts` / `elements.ts` 等にもデータを追加
+- **抽出要素を変えたい場合**: `src/mock/data/elements.ts` を編集（信頼度やbboxも自由に設定可能）
+- **仕様書ドラフトの内容を変えたい場合**: `src/mock/data/drafts.ts` のMarkdown文字列を編集
+- **再解析/再生成で生成されるデータを変えたい場合**: `src/mock/generators/index.ts` を編集
+
+---
+
+## ディレクトリ構成
+
+```
+src/
+├── app/                       Next.js App Router
+│   ├── layout.tsx             ルートレイアウト（AppShell）
+│   ├── page.tsx               案件一覧ページ
+│   ├── globals.css            グローバルCSS・テーマ変数
+│   ├── projects/
+│   │   └── [id]/
+│   │       ├── page.tsx       案件詳細ページ（5タブ）
+│   │       └── compare/
+│   │           └── page.tsx   版差分比較ページ
+│   └── settings/
+│       └── page.tsx           設定ページ
+├── components/
+│   ├── app-shell.tsx          共通レイアウト（ヘッダ・ナビ）
+│   ├── project/               案件詳細の各タブコンポーネント
+│   │   ├── files-tab.tsx
+│   │   ├── analysis-tab.tsx
+│   │   ├── draft-tab.tsx
+│   │   ├── review-tab.tsx
+│   │   └── history-tab.tsx
+│   └── ui/                    shadcn/ui コンポーネント群
+├── lib/
+│   ├── utils.ts               ユーティリティ（cn関数等）
+│   └── format.ts              フォーマット関数
+└── mock/                      モックデータ層（上記参照）
+```
