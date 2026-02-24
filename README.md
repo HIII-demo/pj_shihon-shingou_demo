@@ -28,8 +28,8 @@
 
 ```bash
 # 1. リポジトリをクローン
-git clone <リポジトリURL>
-cd 日本信号様_demo
+git clone https://github.com/HIII-demo/pj_shihon-shingou_demo.git
+cd pj_shihon-shingou_demo
 
 # 2. 依存パッケージをインストール
 npm install
